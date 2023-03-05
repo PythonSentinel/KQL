@@ -1,0 +1,23 @@
+// Look for network connections to known Cobalt Strike command-and-control (C2) servers
+// Replace [C2_Server_IP] with the actual IP address of the Cobalt Strike server
+let knownC2IPs = dynamic(["[C2_Server_IP]"]);
+
+// Search for network connections to the known C2 IPs
+let networkConnections = SecurityNetworkCommunication
+| where RemoteIP in (knownC2IPs);
+
+// Filter network connections by port number and extract relevant fields
+let cobaltStrikeConnections = networkConnections
+| where RemotePort == 80 or RemotePort == 443
+| project TimeGenerated, DeviceName, DeviceIP, RemoteIP, RemotePort, Protocol;
+
+// Look for processes making the connections and extract relevant fields
+let processes = SecurityEvent
+| where EventID == 4688
+| join kind=inner (cobaltStrikeConnections) on $left.NewProcessId == $right.ProcessID
+| project TimeGenerated, DeviceName, DeviceIP, AccountName, ProcessName, CommandLine, RemoteIP, RemotePort;
+
+// Output the results and include the rule name in the output
+cobaltStrikeConnections
+| union processes
+| extend RuleName = "Detect Cobalt Strike C2 Communication - Created by PythonSentinel"
