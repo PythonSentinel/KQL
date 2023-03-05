@@ -1,4 +1,5 @@
-// filter for high severity vulnerabilities with a high confidence level that were found within the last 30 days, adjust as needed - by PythonSentinel.
+// filter for high severity vulnerabilities with a high confidence level that were found within the last 30 days, adjust as needed
+//// Author: PythonSentinel
 
 Vulnerability
 | where Severity == "High" and ConfidenceLevel == "High"
