@@ -1,11 +1,18 @@
-// Search for events where an admin tool was used
-SecurityEvent
-| where EventID in (4688, 4103)
+// Look for any processes executed by a user account in the "Administrators" group
+let adminUsers = SecurityEvent
+| where AccountType == "User" and AccountName != "ANONYMOUS LOGON" and AccountName != "NT AUTHORITY\\LOCAL SERVICE" and AccountName != "NT AUTHORITY\\NETWORK SERVICE"
+| join (SecurityEvent
+        | where EventID == 4728 or EventID == 4732 or EventID == 4756 or EventID == 4764 or EventID == 4781 or EventID == 4799 or EventID == 5376 or EventID == 7040 or EventID == 7045 or EventID == 4688 or EventID == 592 or EventID == 800 or EventID == 801 or EventID == 802 or EventID == 803
+        | where AccountType == "Group" and AccountName == "Administrators") on $left.AccountName == $right.TargetUserName
+| extend TimeDeltaMinutes = (EventTime - TimeGenerated) / 1m
+| where TimeDeltaMinutes > 0 and TimeDeltaMinutes < 15
+| project AccountName, EventID, EventTime, TimeGenerated, ComputerName, ImageFileName, CommandLine;
 
-// Filter by process name and command line
-| where (ProcessName contains "powershell.exe" or ProcessName contains "cmd.exe" or ProcessName contains "mmc.exe")
-  and (CommandLine contains "net user" or CommandLine contains "net localgroup" or CommandLine contains "net group" or CommandLine contains "reg add" or CommandLine contains "reg delete" or CommandLine contains "reg query")
+// Filter for specific admin tools that are commonly used in attacks
+let adminTools = adminUsers
+| where (ImageFileName in ("cmd.exe", "powershell.exe", "mshta.exe", "cscript.exe", "wscript.exe", "psexec.exe", "mimikatz.exe", "net.exe") or CommandLine contains "mimikatz" or CommandLine contains "powershell" or CommandLine contains "net user")
+| project AccountName, EventID, EventTime, TimeGenerated, ComputerName, ImageFileName, CommandLine;
 
-// Extract relevant fields and filter by time range
-| project TimeGenerated, AccountName, ProcessName, CommandLine, NewProcessName, TargetLogonId
-| where TimeGenerated > ago(1d)
+// Output the results and include the rule name in the output
+adminTools
+| extend RuleName = "Detect Admin Tool Use - Created by PythonSentinel"
