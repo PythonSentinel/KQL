@@ -1,0 +1,11 @@
+// Search for events where an admin tool was used
+SecurityEvent
+| where EventID in (4688, 4103)
+
+// Filter by process name and command line
+| where (ProcessName contains "powershell.exe" or ProcessName contains "cmd.exe" or ProcessName contains "mmc.exe")
+  and (CommandLine contains "net user" or CommandLine contains "net localgroup" or CommandLine contains "net group" or CommandLine contains "reg add" or CommandLine contains "reg delete" or CommandLine contains "reg query")
+
+// Extract relevant fields and filter by time range
+| project TimeGenerated, AccountName, ProcessName, CommandLine, NewProcessName, TargetLogonId
+| where TimeGenerated > ago(1d)
