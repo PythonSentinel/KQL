@@ -1,4 +1,6 @@
-// Look for any processes executed by a user account in the "Administrators" group - by PythonSentinel
+// Look for any processes executed by a user account in the "Administrators" group
+// Author: PythonSentinel
+
 let adminUsers = SecurityEvent
 | where AccountType == "User" and AccountName != "ANONYMOUS LOGON" and AccountName != "NT AUTHORITY\\LOCAL SERVICE" and AccountName != "NT AUTHORITY\\NETWORK SERVICE"
 | join (SecurityEvent
