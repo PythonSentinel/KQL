@@ -1,0 +1,21 @@
+let HaveIBeenPwnedBreaches = externaldata(BreachName: string, BreachDate: datetime, PwnCount: int, Description: string, DataClasses: string, IsVerified: bool, IsFabricated: bool, IsSensitive: bool, IsRetired: bool, IsSpamList: bool, LogoPath: string, Name: string, Title: string, Domain: string, BreachLink: string)
+[
+    url @'https://haveibeenpwned.com/api/v3/breaches' 
+    request_query @'truncateResponse=false'
+    with (timeout=600s)
+]
+| project BreachName, BreachDate, PwnCount, Description, DataClasses, IsVerified, IsFabricated, IsSensitive, IsRetired, IsSpamList, LogoPath, Name, Title, Domain, BreachLink;
+let HaveIBeenPwnedBreachesData = externaldata(Account: string, BreachName: string)
+[
+    url @'https://haveibeenpwned.com/api/v3/breachedaccount/{Account}?truncateResponse=false' 
+    request_query @'&includeUnverified=true'
+    with (timeout=600s)
+]
+| extend BreachName = tostring(BreachName)
+| project-away BreachTitle, IsSensitive, IsRetired, IsSpamList, LogoPath, Name, Domain, BreachLink;
+SecurityEvent
+| where EventID == "4624" and AccountType == "User" and TimeGenerated >= ago(7d) and Account in (HaveIBeenPwnedBreachesData | distinct Account)
+| summarize BreachCount = dcount(BreachName) by Account
+| where BreachCount > 0
+| extend AlertDetails = strcat("Your credentials have been involved in a breach in the following services: ", tostring(make_set(BreachName)))
+| project AlertDetails, Account
