@@ -1,4 +1,2 @@
 # KQL
-KQL queries to spice up your threat hunting and analytics life.
-
-Mostly analytics rules or threat hunting queries.
+KQL queries id like to make work but are all currently works in progress, any help appreciated.
